@@ -11,7 +11,7 @@
   </p>
   <h2 align="center">
     <p>CVPR 2025</p>
-    <a href="missing" align="center">Paper</a> 
+    <a href="https://arxiv.org/pdf/2504.20040" align="center">Paper</a> 
     <!-- |  -->
     <!-- <a href="missing" align="center">Demo 🤗</a> |  -->
     <!-- <a href="missing" align="center">Colab</a> | -->
