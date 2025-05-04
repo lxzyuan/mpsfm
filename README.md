@@ -55,7 +55,7 @@ We provide the Python package [`mpsfm`](mpsfm). First clone the repository and i
 git clone --recursive https://github.com/cvg/mpsfm && cd mpsfm
 ```
 
-Build [pyceres](https://github.com/cvg/pyceres) and pycolmap (from [our fork](https://github.com/Zador-Pataki/colmap/tree/clean-update)) from source, then install the required packages:
+Build [pyceres](https://github.com/cvg/pyceres) and pycolmap (from [our fork](https://github.com/Zador-Pataki/colmap)) from source, then install the required packages:
 
 
 
@@ -226,8 +226,8 @@ triangulator:
 ## Our favorite configurations
 
 - [sp-lg_m3dv2](configs/sp-lg_m3dv2.yaml) ⚡️ (default): Fastest reconstruction with very precise camera poses. Failure cases only in scenes with little texture or very challenging viewpoint changes
-- [sp-sp-mast3r](configs/sp-mast3r.yaml) 💪: Robust reconstruction even in egregious viewpoint changes and very low overlap. Thanks to anchoring matches around Superpoint keypoints, reconstruction is also precise. 
-- [sp-sp-mast3r-dense](configs/sp-mast3r-dense.yaml) 💪: Like above, however also leverages dense correspondences in non-salient regions. As a result, this configuration is capable of reconstructing scenes in the most challenging setups: very low-overlap + low texture + egregious view point changes (e.g. opposing views). This, however, comes at the cost of precision. 
+- [sp-mast3r](configs/sp-mast3r.yaml) 💪: Robust reconstruction even in egregious viewpoint changes and very low overlap. Thanks to anchoring matches around Superpoint keypoints, reconstruction is also precise. 
+- [sp-mast3r-dense](configs/sp-mast3r-dense.yaml) 💪: Like above, however also leverages dense correspondences in non-salient regions. As a result, this configuration is capable of reconstructing scenes in the most challenging setups: very low-overlap + low texture + egregious view point changes (e.g. opposing views). This, however, comes at the cost of precision. 
 - [sp-roma-dense_m3dv2](configs/sp-roma-dense_m3dv2.yaml) 🏋️: In the absence of egregious viewpoint changes, this is our most accurate pipeline, however, also the most expensive. 
 
 Below, we detail the benefits of the key priors we recommend, in case the user wants to mix the configurations.  
