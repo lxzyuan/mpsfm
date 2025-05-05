@@ -11,11 +11,12 @@
   </p>
   <h2 align="center">
     <p>CVPR 2025</p>
-    <a href="https://arxiv.org/pdf/2504.20040" align="center">Paper</a> 
+    <a href="https://arxiv.org/pdf/2504.20040" align="center">Paper</a> |
     <!-- |  -->
     <!-- <a href="missing" align="center">Demo 🤗</a> |  -->
     <!-- <a href="missing" align="center">Colab</a> | -->
-    <!-- <a href="missing" align="center">Video</a> -->
+    <a href="https://www.youtube.com/watch?v=Kl4l5fXBUkM&ab_channel=ZadorPataki" align="center">Video</a>
+
   </h2>
   
 <!-- </p>
