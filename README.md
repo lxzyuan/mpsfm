@@ -242,7 +242,7 @@ Our default pipeline is built on top of [Superpoint](mpsfm/extraction/imagewise/
 
 We recommend using `sparse` or `sparse+dense`: 
 - [Superpoint](mpsfm/extraction/imagewise/features/models/configs/superpoint.yaml)+[LightGlue](mpsfm/extraction/pairwise/models/configs/superpoint+lightglue.yaml): **Fast** ⚡️ and **precise**, however struggles under harsh viewpoint changes. 
-- [MASt3r](mpsfm/extraction/pairwise/models/configs/mats3r.yaml)
+- [MASt3r](mpsfm/extraction/pairwise/models/configs/mast3r.yaml)
   - `sparse`: **Robust** 💪 against egregious viewpoint changes (like opposing views) and also **precise** thanks to [Superpoint](mpsfm/extraction/imagewise/features/models/configs/superpoint_lightglue.yaml) keypoints, with a moderate extraction speed. 
   - `sparse+dense`: **Robust** 💪 even in featureless environments, however, precision and extraction speed drops. 
 - [RoMA](mpsfm/extraction/pairwise/models/configs/roma_outdoor.yaml)
@@ -263,7 +263,7 @@ Our leverages [depth and normal estimators](mpsfm/extraction/imagewise/geometry/
   - [Large](mpsfm/extraction/imagewise/geometry/models/configs/metric3dv2-large.yaml) maintains performance against  Giant 💪 in many scenarios while significantly improving extraction speed. [Small](mpsfm/extraction/imagewise/geometry/models/configs/metric3dv2-small.yaml) provides very fast ⚡️ extraction, and performs sufficiently well in easy scenarios
 - [DepthPro](mpsfm/extraction/imagewise/geometry/models/configs/depthpro.yaml): Competes with Metric3Dv2-Giant2 in depth quality 💪; however, with similarly large extraction times and is limited by a lack of predicted uncertainties
 - [DepthAnythingV2](mpsfm/extraction/imagewise/geometry/models/configs/depthanythingv2-outdoor.yaml): Reasonable performance in small scale environments
-- [MASt3R](mpsfm/extraction/pairwise/models/configs/mats3r.yaml): estimates depth maps using two input views. As a result, achieves the best performance 💥 at extracting relative scales between background and foreground objects; critical in some low-overlap scenarios
+- [MASt3R](mpsfm/extraction/pairwise/models/configs/mast3r.yaml): estimates depth maps using two input views. As a result, achieves the best performance 💥 at extracting relative scales between background and foreground objects; critical in some low-overlap scenarios
 
 #### Normal estimation
 - Metric3Dv2:
