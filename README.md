@@ -304,6 +304,71 @@ Our extractors follow the [hloc](https://github.com/cvg/Hierarchical-Localizatio
 
 </details>
 
+
+# Evaluation
+
+Run the [evaluation script](mpsfm_private/scripts/benchmark.py) to benchmark MP-SfM on our low-overlap [test sets](mpsfm_private/local/testsets).  
+**Note:** The script automatically downloads data into [mpsfm_private/local/benchmarks]. For more control over the download, see [Download and Preprocessing](#download-and-preprocessing).
+
+Benchmarks on ETH3D and SMERF can be run as follows, using [paper/repr-sp-lg_m3dv2.yaml](mpsfm_private/configs/paper/repr-sp-lg_m3dv2.yaml) and the `minimal` overlap setting:
+
+```bash
+python scripts/benchmark.py -d eth3d -m minimal
+python scripts/benchmark.py -d smerf -m minimal
+```
+
+The script will evalute the reconstruction per scene. To aggragate the experiment results across [test sets](mpsfm_private/local/testsets), run the aggregation scripts in your temrinal:
+
+```bash
+python scripts/aggregate_experiments/eth3d.py -m minimal
+python scripts/aggregate_experiments/smerf.py -m minimal
+```
+
+<details>
+<summary><b>[Further command line options - click to expand]</b></summary>
+
+The srcripts reconstruct many scenes and are expensive. The benchmark scripts can be exectuted, per test set, per scene, and even test set id. 
+```bash
+python scripts/benchmark.py \
+  -d eth3d \ # (default) benchmark dataset
+  -m minimal \ # overlap level [/leq5/leq10/leq30/all]
+  -s facade \ # scene [/courtyard/electro/...]
+  --testset_id 0 \ # id of an ovelrap level (in this case minimal)
+```
+
+
+
+Additionally, many of the commands carry over from our reconstruction script, with the addition of `--terminate` and `--overwrite`.
+
+```bash
+python scripts/benchmark.py \
+  --conf paper/repr-sp-mast3r   
+  --terminate \ # don't skip to next testset id / scene in the case of a runtime erorr
+  --overwrite \ # rerun already reconstructed test sets
+  --testset_id 0 \ # id of an ovelrap level (in this case minimal)
+  --extract \ 
+  --verbose 0 
+```
+
+Alhtough MP-SfM is still evolving, benchmark our configurations [here](mpsfm_private/configs/paper) to closely reproduce the numbers in our paper.
+
+</details>
+
+### Output Directories and Data Preprocessing
+In contrast to `python reconstruct.py`, benchmark input and output directories are set globally. Adjust the paths in [this file](mpsfm_private/mpsfm/vars/lvars.py) to change them. 
+
+- `*_DATA_DIR`: where the datasets will be stored and processed
+- `*_EXP_DIR`: where the per-reconstruction evaluations will be stored
+- `*_CACHE_DIR`: extraction output directory
+
+To download and preprocess the datasets manually, execute the following scripts in your terminal:
+```bash
+python mpsfm/data_proc/prepare/<dataset>.py \  # eth3d.py/smerf.py
+  --delete-files  # set flag to automatically delete unused files like archives
+```
+
+**Note**: If you execute `python scripts/benchmark.py`, the script will check if the files are downloaded and processed. If not, it will execute the above scripts, with the `--delete-files` flag.
+
 ## BibTeX citation
 
 If you use any ideas from the paper or code from this repo, please consider citing:
