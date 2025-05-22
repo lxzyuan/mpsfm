@@ -307,17 +307,17 @@ Our extractors follow the [hloc](https://github.com/cvg/Hierarchical-Localizatio
 
 # Evaluation
 
-Run the [evaluation script](mpsfm_private/scripts/benchmark.py) to benchmark MP-SfM on our low-overlap [test sets](mpsfm_private/local/testsets).  
-**Note:** The script automatically downloads data into [mpsfm_private/local/benchmarks]. For more control over the download, see [Download and Preprocessing](#download-and-preprocessing).
+Run the [evaluation script](scripts/benchmark.py) to benchmark MP-SfM on our low-overlap [test sets](local/testsets).  
+**Note:** The script automatically downloads data into [mpsfm_private/local/benchmarks]. For more control over the download, see [Output Directories and Data Preprocessing](#output-directories-and-data-preprocessing).
 
-Benchmarks on ETH3D and SMERF can be run as follows, using [paper/repr-sp-lg_m3dv2.yaml](mpsfm_private/configs/paper/repr-sp-lg_m3dv2.yaml) and the `minimal` overlap setting:
+Benchmarks on ETH3D and SMERF can be run as follows, using [paper/repr-sp-lg_m3dv2.yaml](configs/paper/repr-sp-lg_m3dv2.yaml) and the `minimal` overlap setting:
 
 ```bash
 python scripts/benchmark.py -d eth3d -m minimal
 python scripts/benchmark.py -d smerf -m minimal
 ```
 
-The script will evalute the reconstruction per scene. To aggragate the experiment results across [test sets](mpsfm_private/local/testsets), run the aggregation scripts in your temrinal:
+The script will evalute the reconstruction per scene. To aggragate the experiment results across [test sets](local/testsets), run the aggregation scripts in your temrinal:
 
 ```bash
 python scripts/aggregate_experiments/eth3d.py -m minimal
@@ -350,12 +350,12 @@ python scripts/benchmark.py \
   --verbose 0 
 ```
 
-Alhtough MP-SfM is still evolving, benchmark our configurations [here](mpsfm_private/configs/paper) to closely reproduce the numbers in our paper.
+Alhtough MP-SfM is still evolving, benchmark our configurations [here](configs/paper) to closely reproduce the numbers in our paper.
 
 </details>
 
 ### Output Directories and Data Preprocessing
-In contrast to `python reconstruct.py`, benchmark input and output directories are set globally. Adjust the paths in [this file](mpsfm_private/mpsfm/vars/lvars.py) to change them. 
+In contrast to `python reconstruct.py`, benchmark input and output directories are set globally. Adjust the paths in [this file](mpsfm/vars/lvars.py) to change them. 
 
 - `*_DATA_DIR`: where the datasets will be stored and processed
 - `*_EXP_DIR`: where the per-reconstruction evaluations will be stored
