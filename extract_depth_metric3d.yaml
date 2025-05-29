@@ -1,0 +1,28 @@
+# Dataset configuration (tells the loader what to provide)
+dataset:
+  name: simple # Or your specific dataset type if you have a custom parser
+  return_types:
+    - "image"
+    - "intrinsics"
+  # Add any other dataset-specific params your SimpleDataset or custom dataset needs
+
+# Model configuration (for Metric3Dv2 depth and normals)
+model:
+  name: metric3dv2 # Tells `load_model` to get the Metric3Dv2 class
+  write_name: metric3dv2_custom_run # Output HDF5 filename part
+  return_types: 
+    - depth
+    - depth_variance
+    - normals
+    - normals_variance # Calculated from normals_confidence
+    - normals_confidence # Model's raw confidence for normals
+    - valid
+    # Add "depth2", "normals2", etc., if you want flip-consistency results saved
+  scale: 1 # Image scaling factor for the model
+  # models_dir: "local/weights" # Default from BaseModel, ensure your weights are here
+  # model_name: "metric_depth_vit_giant2_800k.pth" # Default for metric3dv2
+  # config_name: "vit.raft5.giant2.py" # Default for metric3dv2
+  # require_download: True # Default in Metric3Dv2's own default_conf
+
+# Verbosity for the script itself (optional)
+verbose: 1
