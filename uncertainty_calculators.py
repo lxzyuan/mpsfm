@@ -317,3 +317,83 @@ class NormalUncertaintyCalculator:
             "fused_normal_map": fused_normals_cartesian,
             "covariance_map": final_cartesian_covariance_map
         }
+
+# --- How to Use These Calculators ---
+"""
+The classes `DepthUncertaintyCalculator` and `NormalUncertaintyCalculator`
+are designed to be used independently of the main MP-SfM pipeline, provided
+you have the necessary input data (depth maps, normal maps, and potentially
+raw model-derived variances or confidences) as NumPy arrays.
+
+General Workflow:
+
+1.  Prepare Input Data:
+    *   Depth Data:
+        *   `base_depth_map`: Your primary depth map (HxW NumPy array).
+        *   `base_model_variance_map` (Optional): Pixel-wise scalar variance associated
+          with `base_depth_map`. This might come from your depth estimation model's
+          confidence, converted to variance.
+        *   `flipped_depth_map` (Optional): A second depth map, e.g., from a
+          horizontally flipped version of the input image, registered to the
+          `base_depth_map`'s viewpoint.
+        *   `flipped_model_variance_map` (Optional): Variance for `flipped_depth_map`.
+    *   Normal Data:
+        *   `base_normal_map`: Your primary normal map (HxWx3 NumPy array, normalized).
+        *   `base_model_scalar_variance_map` (Optional): Pixel-wise scalar variance
+          associated with `base_normal_map` (e.g., derived from a model's kappa
+          value or concentration parameter).
+        *   `flipped_normal_map` (Optional): A second normal map from a flipped image,
+          geometrically aligned with `base_normal_map`.
+        *   `flipped_model_scalar_variance_map` (Optional): Scalar variance for
+          `flipped_normal_map`.
+    *   `combined_validity_mask` (Optional): An HxW boolean NumPy array where True
+      indicates a pixel where the prior is considered valid. This can be derived
+      from depth > 0, continuity checks, sky masks, etc.
+
+2.  Define Configuration Dictionaries:
+    *   Create a `config_dict` for `DepthUncertaintyCalculator` and another for
+      `NormalUncertaintyCalculator`. These dictionaries hold parameters that
+      control how uncertainty is calculated (see the __init__ docstrings of each
+      class for available parameters and their typical effects).
+      Example:
+      ```python
+      depth_config = {
+          'use_model_prior_uncertainty': True,
+          'use_flip_consistency': True,
+          'proportional_depth_scalar': 0.03, # 3% of depth value
+          'inherent_noise_std': 0.01, # 1cm
+          # ... other params
+      }
+      normal_config = {
+          'use_flip_consistency': True,
+          'inherent_polar_noise_std': np.deg2rad(1.5), # 1.5 degrees
+          # ... other params
+      }
+      ```
+
+3.  Instantiate and Use Calculators:
+    *   `depth_calc = DepthUncertaintyCalculator(depth_config)`
+    *   `depth_results = depth_calc.calculate_variance(...)`
+    *
+    *   `normal_calc = NormalUncertaintyCalculator(normal_config)`
+    *   `normal_results = normal_calc.calculate_covariance(...)`
+
+4.  Interpret Results:
+    *   `depth_results` will be a dictionary:
+        {
+            "fused_depth_map": np.ndarray, # The processed depth map
+            "variance_map": np.ndarray,    # Pixel-wise scalar variance
+            "final_validity_mask": np.ndarray # Boolean validity mask
+        }
+    *   `normal_results` will be a dictionary:
+        {
+            "fused_normal_map": np.ndarray, # The processed normal map
+            "covariance_map": np.ndarray   # Pixel-wise 3x3 Cartesian covariance
+        }
+
+For a runnable demonstration, please see `usage_example.py` which shows how
+to load data from HDF5 files (as produced by MP-SfM's extraction or processing)
+and pass it to these calculators. The example also highlights how the choice of
+input data (e.g., raw extraction outputs vs. processed data from sfm_outputs)
+affects which features of the calculators can be fully utilized.
+"""
