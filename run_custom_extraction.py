@@ -47,7 +47,7 @@ def run_single_geometry_extraction(config_path, data_directory, image_dir_name="
 
     # Load the YAML configuration for the extraction
     conf_dict = yaml.safe_load(cfg_path.read_text())
-    extraction_conf = OmegaConf.create(conf_dict) 
+    extraction_conf = OmegaConf.create(conf_dict)
 
     # Ensure model weights directory is correctly pointed to
     # BaseModel expects conf.model.models_dir
@@ -73,19 +73,19 @@ def run_single_geometry_extraction(config_path, data_directory, image_dir_name="
     if not image_names_to_process:
         print("No images to process.")
         return
-        
+
     scene_parser = SimpleParser(
-        data_dir=data_dir, 
-        imnames=image_names_to_process, 
+        data_dir=data_dir,
+        imnames=image_names_to_process,
         intrinsics_pth=intrinsics_actual_path,
-        rgb_dir=images_actual_dir 
+        rgb_dir=images_actual_dir
     )
-    
+
     h5_output_file_path, _ = extract_geometry_main(
-        conf=extraction_conf, 
-        export_dir=output_path, 
-        overwrite=overwrite, 
-        image_list=image_names_to_process, 
+        conf=extraction_conf,
+        export_dir=output_path,
+        overwrite=overwrite,
+        image_list=image_names_to_process,
         scene_parser=scene_parser,
         verbose=extraction_conf.get("verbose", 0)
     )
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                         help="Optional path to a text file listing image basenames to process (one per line). Processes all images in image_dir if not provided.")
     parser.add_argument("--no_overwrite", action="store_false", dest="overwrite",
                         help="Disable overwriting if HDF5 output for an image already exists.")
-    
+
     args = parser.parse_args()
 
     try:

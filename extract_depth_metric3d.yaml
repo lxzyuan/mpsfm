@@ -1,6 +1,6 @@
 # Dataset configuration (tells the loader what to provide)
 dataset:
-  name: simple 
+  name: simple
   return_types:
     - "image"
     - "intrinsics"
@@ -10,7 +10,7 @@ dataset:
 model:
   name: metric3dv2
   write_name: metric3dv2 # Changed from metric3dv2_custom_run
-  return_types: 
+  return_types:
     - depth
     - depth_variance
     - normals

@@ -16,7 +16,7 @@ except ImportError:
 
 def load_raw_priors_data(extraction_h5_path: Path, image_name: str) -> dict:
     """
-    Loads raw extraction data (depth, normals, model variances, flipped versions, validity) 
+    Loads raw extraction data (depth, normals, model variances, flipped versions, validity)
     for an image from an HDF5 file (e.g., metric3dv2.h5 from custom_extraction_output/).
     Assumes image_name is a direct key in this HDF5 file.
     """
@@ -39,22 +39,22 @@ def load_raw_priors_data(extraction_h5_path: Path, image_name: str) -> dict:
 # --- Main Example ---
 if __name__ == "__main__":
     mpsfm_root = Path(".").resolve() # Assumes script is run from MP-SfM root
-    
+
     # --- User Configuration for Data ---
     # This example now assumes you have first run `run_custom_extraction.py`
     # with `extract_depth_metric3d.yaml` (which has model.write_name: metric3dv2).
     # The output of that script is the input for this one.
-    
+
     # Directory where `run_custom_extraction.py` saves its output
-    custom_extraction_dir = mpsfm_root / "custom_extraction_output" 
+    custom_extraction_dir = mpsfm_root / "custom_extraction_output"
     # The HDF5 file containing raw priors (depth, normals, variances, flipped versions)
     # Name comes from `model.write_name` in `extract_depth_metric3d.yaml`
-    raw_priors_h5_file = custom_extraction_dir / "metric3dv2.h5" 
-    
+    raw_priors_h5_file = custom_extraction_dir / "metric3dv2.h5"
+
     # Image filename (used as key in the HDF5 file)
     # This should be one of the images processed by `run_custom_extraction.py`
     # (e.g., from `local/example/images/`)
-    image_filename_key = "indoor_DSC02865.JPG" 
+    image_filename_key = "indoor_DSC02865.JPG"
 
     print(f"--- Using Data Spec ---")
     print(f"Raw Priors HDF5 (source for depth & normals): {raw_priors_h5_file}")
@@ -71,33 +71,33 @@ if __name__ == "__main__":
     # Check for essential data components
     has_base_depth = 'depth' in raw_data
     has_base_normals = 'normals' in raw_data
-    
+
     run_depth_example = has_base_depth
     run_normal_example = has_base_normals
 
     # --- Example Configurations (defined in script) ---
     # Now we can enable more features of the calculators
     depth_calc_config = {
-        'use_model_prior_uncertainty': True, 
-        'use_flip_consistency': True,    
-        'proportional_depth_scalar': 0.03, 
+        'use_model_prior_uncertainty': True,
+        'use_flip_consistency': True,
+        'proportional_depth_scalar': 0.03,
         'model_variance_multiplier': 1.0, # Raw model variance is used directly
         'flip_consistency_variance_multiplier': 1.0, # Variance from (d1-d2)^2 also scaled by this
         'inherent_noise_std': 0.01,
-        'max_allowed_std': 0.75, 
+        'max_allowed_std': 0.75,
         'final_variance_multiplier': 1.0
     }
     print(f"Depth Calculator Config: {depth_calc_config}")
 
     normal_calc_config = {
-        'use_flip_consistency': True, 
+        'use_flip_consistency': True,
         'inherent_polar_noise_std': np.deg2rad(1.5), # 1.5 degrees
-        'model_variance_multiplier': 1.0, 
+        'model_variance_multiplier': 1.0,
         'flip_consistency_variance_multiplier': 1.0,
         'final_covariance_multiplier': 1.0
     }
     print(f"Normal Calculator Config: {normal_calc_config}\n")
-    
+
     # --- Create Combined Validity Mask ---
     # Uses 'valid' and 'valid2' (if flip consistency) from the raw extraction data
     combined_valid_mask = None
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     if run_depth_example:
         print("--- Running DepthUncertaintyCalculator ---")
         depth_calculator = DepthUncertaintyCalculator(depth_calc_config)
-        
+
         # Inputs from the raw_data dictionary
         base_depth = raw_data['depth']
         base_model_var = raw_data.get('depth_variance')
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         if depth_calc_config['use_flip_consistency'] and flipped_depth is None:
             print("  Warning: Depth config 'use_flip_consistency' is True, but 'depth2' not found in raw data. Disabling.")
             depth_calculator.config['use_flip_consistency'] = False
-            
+
         depth_results = depth_calculator.calculate_variance(
             base_depth_map=base_depth.copy(),
             base_model_variance_map=base_model_var.copy() if base_model_var is not None else None,
@@ -162,8 +162,8 @@ if __name__ == "__main__":
 
         base_normals = raw_data['normals']
         # 'normals_variance' from Metric3Dv2 output is already kappa_to_alpha(conf)**2
-        base_model_scalar_var = raw_data.get('normals_variance') 
-        
+        base_model_scalar_var = raw_data.get('normals_variance')
+
         flipped_normals = raw_data.get('normals2')
         flipped_model_scalar_var = raw_data.get('normals2_variance')
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         if normal_calc_config['use_flip_consistency'] and flipped_normals is None:
             print("  Warning: Normal config 'use_flip_consistency' is True, but 'normals2' not found. Disabling.")
             normal_calculator.config['use_flip_consistency'] = False
-        
+
         if not normal_calculator.config['use_flip_consistency'] and base_model_scalar_var is None:
              print(f"  Error: Normal calculation needs 'base_model_scalar_variance_map' if not using flip consistency. Not found.")
         else:
@@ -190,7 +190,7 @@ if __name__ == "__main__":
                     print(f"  Using combined validity mask (from depth) for normals.")
                 else:
                     print(f"  Warning: Combined validity mask shape {combined_valid_mask.shape} differs from normal map shape {base_normals.shape[:2]}. Not using mask for normals.")
-            
+
             normal_results = normal_calculator.calculate_covariance(
                 base_normal_map=base_normals.copy(),
                 base_model_scalar_variance_map=base_model_scalar_var.copy() if base_model_scalar_var is not None else None,
@@ -200,12 +200,12 @@ if __name__ == "__main__":
             )
             print(f"  Output 'fused_normal_map' shape: {normal_results['fused_normal_map'].shape}")
             print(f"  Output 'covariance_map' shape: {normal_results['covariance_map'].shape}")
-            
+
             # Determine a valid point to sample covariance from
             final_normal_valid_mask = np.ones(base_normals.shape[:2], dtype=bool)
             if normal_valid_mask_for_calc is not None:
                 final_normal_valid_mask = normal_valid_mask_for_calc
-            
+
             # Additionally, ensure the fused normal itself is valid (not default from masking)
             check_fused_normals = normal_results['fused_normal_map']
             non_default_normal_mask = (np.abs(check_fused_normals[...,0]) > 1e-5) | \

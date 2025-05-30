@@ -55,8 +55,8 @@ def cart_to_spherical_mean_detailed(N1_cart: np.ndarray, N2_cart: np.ndarray)   
     mean_sph[..., 1] = np.arctan2(np.sin(mean_sph[..., 1]), np.cos(mean_sph[..., 1]))
     return mean_sph, N1_sph, N2_sph_adjusted
 
-def covar_from_spherical_diffs(mean_normal_spherical: np.ndarray, 
-                               N1_spherical: np.ndarray, 
+def covar_from_spherical_diffs(mean_normal_spherical: np.ndarray,
+                               N1_spherical: np.ndarray,
                                N2_spherical_adjusted: np.ndarray) -> np.ndarray:
     """ Computes 2x2 spherical covariance from differences to the mean. """
     diff1 = diff_angle_rad(N1_spherical, mean_normal_spherical)
@@ -70,7 +70,7 @@ def covar_from_spherical_diffs(mean_normal_spherical: np.ndarray,
     cov_sphere[..., 0, 1] = cov_theta_phi; cov_sphere[..., 1, 0] = cov_theta_phi
     return cov_sphere
 
-def scalar_variance_to_spherical_covariance(scalar_variance_map: np.ndarray, 
+def scalar_variance_to_spherical_covariance(scalar_variance_map: np.ndarray,
                                             inherent_polar_noise_std: float) -> np.ndarray:
     """ Converts per-pixel scalar variance to a diagonal 2x2 spherical covariance matrix. """
     shape_prefix = scalar_variance_map.shape
@@ -82,12 +82,12 @@ def scalar_variance_to_spherical_covariance(scalar_variance_map: np.ndarray,
     return cov_sphere_diag
 
 def calculate_two_view_spherical_covariance_and_mean(
-    N1_cart: np.ndarray, N2_cart: np.ndarray, 
-    v1_scalar_map: Optional[np.ndarray], v2_scalar_map: Optional[np.ndarray], 
+    N1_cart: np.ndarray, N2_cart: np.ndarray,
+    v1_scalar_map: Optional[np.ndarray], v2_scalar_map: Optional[np.ndarray],
     inherent_polar_noise_std: float,
     model_variance_multiplier: float,
     flip_consistency_variance_multiplier: float
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]: 
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     mean_N_sph, N1_sph, N2_sph_adj = cart_to_spherical_mean_detailed(N1_cart, N2_cart)
     cov_sphere_from_diff = covar_from_spherical_diffs(mean_N_sph, N1_sph, N2_sph_adj)
     cov_sphere_from_diff *= flip_consistency_variance_multiplier
@@ -95,7 +95,7 @@ def calculate_two_view_spherical_covariance_and_mean(
         effective_v_sph = v1_scalar_map * model_variance_multiplier
         cov_sphere_from_diff[..., 0, 0] = np.maximum(cov_sphere_from_diff[..., 0, 0], effective_v_sph)
         cov_sphere_from_diff[..., 1, 1] = np.maximum(cov_sphere_from_diff[..., 1, 1], effective_v_sph)
-    if v2_scalar_map is not None: 
+    if v2_scalar_map is not None:
         effective_v_sph = v2_scalar_map * model_variance_multiplier
         cov_sphere_from_diff[..., 0, 0] = np.maximum(cov_sphere_from_diff[..., 0, 0], effective_v_sph)
         cov_sphere_from_diff[..., 1, 1] = np.maximum(cov_sphere_from_diff[..., 1, 1], effective_v_sph)
@@ -108,7 +108,7 @@ def calculate_two_view_spherical_covariance_and_mean(
 
 class DepthUncertaintyCalculator:
     """
-    Calculates pixel-wise scalar variance for a depth map based on various inputs 
+    Calculates pixel-wise scalar variance for a depth map based on various inputs
     and configuration parameters.
     """
     def __init__(self, config_dict: Dict):
@@ -133,8 +133,8 @@ class DepthUncertaintyCalculator:
     def _get_config_param(self, key: str, default_value):
         return self.config.get(key, default_value)
 
-    def _fuse_depth_maps(self, 
-                         base_depth: np.ndarray, 
+    def _fuse_depth_maps(self,
+                         base_depth: np.ndarray,
                          flipped_depth: Optional[np.ndarray],
                          base_variance_for_fusion: Optional[np.ndarray],
                          flipped_variance_for_fusion: Optional[np.ndarray]
@@ -146,7 +146,7 @@ class DepthUncertaintyCalculator:
                 inv_var1 = 1.0 / (base_variance_for_fusion + epsilon)
                 inv_var2 = 1.0 / (flipped_variance_for_fusion + epsilon)
                 sum_inv_var = inv_var1 + inv_var2
-                weight1 = inv_var1 / (sum_inv_var + epsilon) 
+                weight1 = inv_var1 / (sum_inv_var + epsilon)
                 weight2 = inv_var2 / (sum_inv_var + epsilon)
                 return base_depth * weight1 + flipped_depth * weight2
             else:
@@ -179,12 +179,12 @@ class DepthUncertaintyCalculator:
         scaled_base_model_var = None
         if base_model_variance_map is not None and self._get_config_param('use_model_prior_uncertainty', True):
             scaled_base_model_var = base_model_variance_map * model_var_mult
-            
+
         scaled_flipped_model_var = None
         if flipped_model_variance_map is not None and self._get_config_param('use_model_prior_uncertainty', True):
             scaled_flipped_model_var = flipped_model_variance_map * model_var_mult
 
-        fused_depth = self._fuse_depth_maps(base_depth_map, flipped_depth_map, 
+        fused_depth = self._fuse_depth_maps(base_depth_map, flipped_depth_map,
                                             scaled_base_model_var, scaled_flipped_model_var)
         variance_candidates = []
         if self._get_config_param('use_model_prior_uncertainty', True):
@@ -194,7 +194,7 @@ class DepthUncertaintyCalculator:
                 variance_candidates.append(1.0 / (inv_var_sum + epsilon))
             elif scaled_base_model_var is not None:
                 variance_candidates.append(scaled_base_model_var)
-        
+
         if self._get_config_param('use_flip_consistency', False) and flipped_depth_map is not None:
             var_from_diff = (base_depth_map - flipped_depth_map)**2
             var_from_diff *= self._get_config_param('flip_consistency_variance_multiplier', 1.0)
@@ -206,7 +206,7 @@ class DepthUncertaintyCalculator:
         var_proportional = None
         if proportional_scalar is not None and proportional_scalar > 0:
             var_proportional = (fused_depth * proportional_scalar)**2
-            
+
         if not variance_candidates:
             if var_proportional is not None:
                  current_variance = var_proportional
@@ -216,29 +216,29 @@ class DepthUncertaintyCalculator:
                 current_variance = np.ones_like(fused_depth) * (self._get_config_param('inherent_noise_std', 0.02)**2)
         else:
             current_variance = variance_candidates[0]
-            if len(variance_candidates) > 1: 
-                 current_variance = np.maximum(current_variance, variance_candidates[1]) 
+            if len(variance_candidates) > 1:
+                 current_variance = np.maximum(current_variance, variance_candidates[1])
 
-            if var_proportional is not None: 
+            if var_proportional is not None:
                 current_variance = np.maximum(current_variance, var_proportional)
 
         min_var = self._get_config_param('inherent_noise_std', 0.02)**2
         max_allowed_std_val = self._get_config_param('max_allowed_std', None)
         max_var_clip = max_allowed_std_val**2 if max_allowed_std_val is not None else np.inf
         actual_min_var = min_var if max_var_clip == np.inf or min_var <= max_var_clip else max_var_clip
-        
+
         constrained_variance = np.clip(current_variance, actual_min_var, max_var_clip)
         final_variance = constrained_variance * (self._get_config_param('final_variance_multiplier', 1.0)**2)
-        
+
         final_valid_mask = combined_validity_mask
         if final_valid_mask is None:
             final_valid_mask = np.ones_like(fused_depth, dtype=bool)
-        
-        zero_depth_mask = (fused_depth <= 1e-3) 
+
+        zero_depth_mask = (fused_depth <= 1e-3)
         final_valid_mask[zero_depth_mask] = False
-        final_variance[~final_valid_mask] = 1e6 
-        fused_depth[~final_valid_mask] = 0 
-            
+        final_variance[~final_valid_mask] = 1e6
+        fused_depth[~final_valid_mask] = 0
+
         return {
             "fused_depth_map": fused_depth,
             "variance_map": final_variance,
@@ -250,7 +250,7 @@ class NormalUncertaintyCalculator:
     def __init__(self, config_dict: Dict):
         """
         Args:
-            config_dict (dict): Parameters like 'use_flip_consistency', 
+            config_dict (dict): Parameters like 'use_flip_consistency',
                                 'inherent_polar_noise_std', 'model_variance_multiplier', etc.
         """
         self.config = config_dict
@@ -298,18 +298,23 @@ class NormalUncertaintyCalculator:
 
         jacobian_map_hw3x2 = spherical_to_cartesian_jacobian(mean_normals_for_jacobian_spherical)
         # Cov_cartesian = J @ Cov_sphere @ J.T
-        temp_mult_hw3x2 = np.einsum('...ji,...jk->...ik', jacobian_map_hw3x2, spherical_cov_map_2x2, optimize='optimal')
-        cartesian_covariance_map_3x3 = np.einsum('...ji,...kj->...ik', temp_mult_hw3x2, jacobian_map_hw3x2, optimize='optimal')
-        
+        # J is (..., 3, 2), Cov_sphere is (..., 2, 2)
+        # temp should be (..., 3, 2)
+        temp_mult_hw3x2 = jacobian_map_hw3x2 @ spherical_cov_map_2x2
+
+        # temp is (..., 3, 2), J.T is (..., 2, 3)
+        # final result should be (..., 3, 3)
+        cartesian_covariance_map_3x3 = temp_mult_hw3x2 @ np.swapaxes(jacobian_map_hw3x2, -1, -2)
+
         final_cartesian_covariance_map = cartesian_covariance_map_3x3 *                                          (self._get_config_param('final_covariance_multiplier', 1.0)**2)
 
         if combined_validity_mask is not None:
-            identity_large = np.eye(3) * 1e6 
+            identity_large = np.eye(3) * 1e6
             final_cartesian_covariance_map[~combined_validity_mask] = identity_large
             # Ensure broadcasting for assignment if mask is HxW and normals HxWx3
-            if fused_normals_cartesian.ndim > combined_validity_mask.ndim: 
-                 fused_normals_cartesian[~combined_validity_mask, :] = np.array([0.0,0.0,1.0]) 
-            elif fused_normals_cartesian.ndim == combined_validity_mask.ndim: 
+            if fused_normals_cartesian.ndim > combined_validity_mask.ndim:
+                 fused_normals_cartesian[~combined_validity_mask, :] = np.array([0.0,0.0,1.0])
+            elif fused_normals_cartesian.ndim == combined_validity_mask.ndim:
                  fused_normals_cartesian[~combined_validity_mask] = np.array([0.0,0.0,1.0])
 
 

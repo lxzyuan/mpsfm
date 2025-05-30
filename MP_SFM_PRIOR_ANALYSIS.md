@@ -73,18 +73,18 @@ def run_geometry_extraction_conceptual(model_config, image_paths_list, scene_par
 
     # 2. Load the specific model wrapper (e.g., Metric3Dv2, DSINE)
     # model_instance = load_model(model_config) # from mpsfm.extraction import load_model
-    
+
     # 3. For each data_batch from DataLoader:
     #      # Prepare input: scale image, scale intrinsics if needed
     #      prepared_input_dict = {"image": scaled_image_np, "intrinsics": scaled_intrinsics_np, "meta": data_batch["meta"]}
-    #      
+    #
     #      # Perform inference via the model wrapper
     #      prediction_output_dict = model_instance(prepared_input_dict) # Calls model_instance._forward()
-    #      
+    #
     #      # Add image name to predictions for storage
     #      image_name = data_batch["meta"]["image_name"][0]
-    #      prediction_output_dict["name"] = image_name 
-    #      
+    #      prediction_output_dict["name"] = image_name
+    #
     #      # Save to HDF5
     #      # with h5py.File(output_h5_path, "a") as fd:
     #      #   grp = fd.create_group(image_name)
@@ -104,18 +104,18 @@ class ConceptualMetric3DWrapper: # Simplified
         # In reality: self.metric3d_native_config = load_config_for_third_party_model()
         pass
 
-    def _process_single_view_output(self, raw_depth_tensor, raw_normal_tensor, raw_confidence_tensor, 
+    def _process_single_view_output(self, raw_depth_tensor, raw_normal_tensor, raw_confidence_tensor,
                                    padding_info, original_hw_shape, metric3d_cfg_details):
         # 1. Slice padding from raw tensors and interpolate to original_hw_shape.
         #    depth_interpolated, normal_interpolated, confidence_interpolated = ...
-        # 2. Scale depth: 
+        # 2. Scale depth:
         #    depth_scaled = depth_interpolated * metric3d_cfg_details.normalize_scale / metric3d_cfg_details.label_scale_factor
-        # 3. Calculate depth_variance from confidence: 
+        # 3. Calculate depth_variance from confidence:
         #    error = depth_scaled * (1 - confidence_interpolated); variance = error**2
         # 4. Convert normal_confidence to normal_variance (e.g., using kappa_to_alpha function).
         # 5. Transform normals to desired output coordinate system (e.g., omni_to_bni).
-        # return {"depth": depth_scaled_np, "depth_variance": variance_np, 
-        #           "normals": processed_normals_np, "normals_confidence": normal_confidence_np, 
+        # return {"depth": depth_scaled_np, "depth_variance": variance_np,
+        #           "normals": processed_normals_np, "normals_confidence": normal_confidence_np,
         #           "normals_variance": normal_variance_np, "valid": valid_mask_np} # valid_mask from depth range
         pass
 
@@ -126,11 +126,11 @@ class ConceptualMetric3DWrapper: # Simplified
         # 2. Perform inference:
         #    raw_nn_output = self.third_party_metric3d_model.inference(input_tensor_for_nn)
         #    # raw_nn_output contains 'prediction' (depth), 'prediction_normal', 'confidence'.
-        # 
+        #
         # 3. Post-process the output:
-        #    results_dict = self._process_single_view_output(raw_nn_output['prediction'], raw_nn_output['prediction_normal'], 
-        #                                                  raw_nn_output['confidence'], padding_info, 
-        #                                                  original_hw_shape=data_from_orchestrator['image'].shape[:2], 
+        #    results_dict = self._process_single_view_output(raw_nn_output['prediction'], raw_nn_output['prediction_normal'],
+        #                                                  raw_nn_output['confidence'], padding_info,
+        #                                                  original_hw_shape=data_from_orchestrator['image'].shape[:2],
         #                                                  metric3d_cfg_details=self.metric3d_native_config.data_basic)
         #
         # 4. Handle flip consistency if self.conf.return_types requests "depth2", "normals2", etc.:
@@ -161,21 +161,21 @@ class ConceptualMPSFMImageWrapper:
     def initialize_priors(self, image_name_str, keypoints_np_for_image,
                           raw_depth_data_dict, raw_normals_data_dict, # Loaded from HDF5
                           sky_mask_np_array=None):
-        
+
         # Instantiate Depth object
         # The Depth class's __init__ (see Snippet D) will use its conf and raw_depth_data_dict
         # to calculate final depth and variance maps.
         self.depth = ConceptualDepthPrior(
-            conf=self.conf.depth, 
-            depth_dict_raw=raw_depth_data_dict, 
+            conf=self.conf.depth,
+            depth_dict_raw=raw_depth_data_dict,
             camera=self._pycolmap_camera_obj, # For resolution
             kps=keypoints_np_for_image,    # For sampling at keypoints
             mask=sky_mask_np_array
         )
-        
+
         # Instantiate Normals object
         continuity_mask = self.depth.get_continuity_mask() # Assuming Depth class provides this
-        
+
         # The Normals class's __init__ (see Snippet E) will use its conf and raw_normals_data_dict
         # to calculate final normal map and 3x3 covariance maps.
         self.normals = ConceptualNormalPrior(
@@ -195,7 +195,7 @@ class ConceptualMPSFMImageWrapper:
 class ConceptualDepthPrior:
     def __init__(self, conf, depth_dict_raw, camera, kps, mask):
         self.conf = conf # Config for uncertainty calculation
-        
+
         # 1. Fuse multiple depth estimates (if flip_consistency enabled in conf):
         #    e.g., self.data_prior = (depth_dict_raw['depth'] + depth_dict_raw['depth2']) / 2
         #    Store the chosen/fused depth map in self.data_prior (HxW NumPy array).
@@ -207,7 +207,7 @@ class ConceptualDepthPrior:
         #    - If conf.fixed_uncertainty: use conf.fixed_uncertainty_val.
         #    Store this initial variance.
 
-        # 3. Combine/select variance: 
+        # 3. Combine/select variance:
         #    If multiple strategies active (e.g., prior_uncertainty and depth_uncertainty_scalar),
         #    often take the np.maximum() to be conservative.
         #    Store in self.uncertainty (HxW NumPy array of variances).
@@ -219,10 +219,10 @@ class ConceptualDepthPrior:
         # 5. Apply validity masks (from input `mask`, model's `depth_dict_raw['valid']`, continuity checks):
         #    self.uncertainty[~valid_mask_combined] = very_large_value
         #    self.valid_mask = valid_mask_combined
-        
+
         # (Actual implementation involves careful handling of which variances to fuse if multiple are present)
         pass
-    
+
     def get_continuity_mask(self):
         # Calculate and return a mask where depth is locally continuous.
         pass
@@ -250,16 +250,16 @@ class ConceptualNormalPrior:
             # Resize N2_raw, v2_scalar_raw. Normalize N2_resized.
             # N2 = processed N2_raw
             # v2_scalar = processed v2_scalar_raw
-            
+
             # self.data (HxWx3) = mean of N1, N2 (normalized)
-            
+
             # self.uncertainty (HxWx3x3) is computed by `two_view_covariance(N1, N2, v1_scalar, v2_scalar, conf_params)`
             # `two_view_covariance` converts N1, N2 to spherical coords, calculates a 2x2 spherical covariance
             # matrix (incorporating v1_scalar, v2_scalar, noise, multipliers), then transforms this
             # 2x2 spherical covariance to a 3x3 Cartesian covariance using Jacobians.
         else: # Single normal map
             # self.data (HxWx3) = N1
-            
+
             # Convert v1_scalar (per-pixel scalar variance) to a HxWx3x3 Cartesian covariance matrix:
             # 1. Create HxWx2x2 diagonal spherical covariance matrix `C_sphere` where diagonals are v1_scalar.
             # 2. Add `conf.inherent_polar_noise**2` to diagonals of `C_sphere`.
@@ -267,7 +267,7 @@ class ConceptualNormalPrior:
             # 4. Calculate Jacobian `J` (HxWx3x2) of spherical-to-Cartesian transform at `N_spherical`.
             # 5. self.uncertainty (HxWx3x3) = J @ C_sphere @ J.transpose.
             # 6. Scale self.uncertainty by `conf.prior_std_multiplier**2`.
-        
+
         # Scale final self.uncertainty by `conf.std_multiplier**2`.
         # Apply input `mask` and `continuity_mask` to self.uncertainty (e.g., by setting cov for masked pixels to identity * large_val).
         # Compute self.data_downscaled, self.uncertainty_downscaled.
