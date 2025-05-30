@@ -1,6 +1,6 @@
 # Dataset configuration (tells the loader what to provide)
 dataset:
-  name: simple # Or your specific dataset type if you have a custom parser
+  name: simple 
   return_types:
     - "image"
     - "intrinsics"
@@ -8,16 +8,21 @@ dataset:
 
 # Model configuration (for Metric3Dv2 depth and normals)
 model:
-  name: metric3dv2 # Tells `load_model` to get the Metric3Dv2 class
-  write_name: metric3dv2_custom_run # Output HDF5 filename part
+  name: metric3dv2
+  write_name: metric3dv2 # Changed from metric3dv2_custom_run
   return_types: 
     - depth
     - depth_variance
     - normals
-    - normals_variance # Calculated from normals_confidence
-    - normals_confidence # Model's raw confidence for normals
+    - normals_confidence # Raw confidence from model, used to derive normals_variance
+    - normals_variance   # Will be calculated as kappa_to_alpha(normals_confidence)**2 by Metric3Dv2 wrapper
     - valid
-    # Add "depth2", "normals2", etc., if you want flip-consistency results saved
+    - depth2             # For flip consistency
+    - depth_variance2    # For flip consistency
+    - normals2           # For flip consistency
+    - normals_confidence2# For flip consistency
+    - normals2_variance  # For flip consistency (calculated from normals_confidence2)
+    - valid2             # For flip consistency
   scale: 1 # Image scaling factor for the model
   # models_dir: "local/weights" # Default from BaseModel, ensure your weights are here
   # model_name: "metric_depth_vit_giant2_800k.pth" # Default for metric3dv2
