@@ -1,13 +1,13 @@
 ARG UBUNTU_VERSION=22.04
 ARG NVIDIA_CUDA_VERSION=12.8.0
 
-# Builder stage
+# Builder stage for installing & compiling dependencies
 FROM nvidia/cuda:${NVIDIA_CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} as builder
 
 ARG CUDA_ARCHITECTURES=native
-
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install system packages & dependencies
 RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.init7.net/ubuntu/|g' /etc/apt/sources.list && \
     sed -i 's|http://security.ubuntu.com/ubuntu/|http://mirror.init7.net/ubuntu/|g' /etc/apt/sources.list && \
     apt-get update && \
@@ -39,19 +39,16 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.init7.net/ubuntu/|
         libatlas-base-dev \
         libsuitesparse-dev
 
-# Build Ceres (redundant if already installed but keeping for completeness)
+# Build Ceres & pyceres
 RUN git clone --branch 2.2.0 --depth 1 https://ceres-solver.googlesource.com/ceres-solver /ceres-solver && \
     mkdir /ceres-solver/build && cd /ceres-solver/build && \
     cmake .. -GNinja -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES} -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr/local && \
     ninja install
-# Build and install pyceres
 RUN git clone --depth 1 https://github.com/cvg/pyceres.git /pyceres && \
     python3 -m pip install /pyceres
 
-# Install ruff separately
+# Install ruff & COLMAP
 RUN python3 -m pip install ruff
-
-# Build and install COLMAP fork
 ARG COLMAP_GIT_COMMIT=main
 RUN git clone --depth 1 https://github.com/Zador-Pataki/colmap.git /colmap && \
     cd /colmap && git checkout ${COLMAP_GIT_COMMIT} && \
@@ -60,6 +57,7 @@ RUN git clone --depth 1 https://github.com/Zador-Pataki/colmap.git /colmap && \
     ninja install && \
     python3 -m pip install /colmap
 
+# Clean up to reduce image size
 RUN rm -rf \
     /colmap \
     /ceres-solver \
@@ -71,30 +69,34 @@ RUN rm -rf \
     /usr/local/lib/*.a \
     /usr/local/lib/*.la
 
-# Runtime stage
+# Runtime stage for minimal runtime dependencies
 FROM nvidia/cuda:${NVIDIA_CUDA_VERSION}-runtime-ubuntu${UBUNTU_VERSION} as runtime
-
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install only what's needed at runtime
 RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.init7.net/ubuntu/|g' /etc/apt/sources.list && \
     sed -i 's|http://security.ubuntu.com/ubuntu/|http://mirror.init7.net/ubuntu/|g' /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         python3 python3-pip \
         git \ 
+        wget \
         libboost-program-options-dev \
         libatlas-base-dev \
         libceres-dev libfreeimage-dev libglew-dev libgoogle-glog-dev \
         libqt5core5a libqt5gui5 libqt5widgets5 libcurl4 \
         libopenblas0-pthread
 
+# Copy compiled artifacts from builder
 COPY --from=builder /usr/local/ /usr/local/
 ENV PATH=/usr/local/bin:$PATH
 
+# Install Python requirements
 WORKDIR /mpsfm
 COPY requirements.txt .
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install -r requirements.txt && \
     rm -rf /root/.cache
 
+# Final entrypoint
 ENTRYPOINT ["bash"]

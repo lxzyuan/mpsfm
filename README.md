@@ -81,6 +81,35 @@ python -m pip install -e .
 
 </details>
 
+<details>
+
+
+<summary><b>[Docker - click to expand]</b></summary>
+
+We also provide a Docker image with all system dependencies preinstalled.
+
+```bash
+git clone --recursive https://github.com/cvg/mpsfm && cd mpsfm
+docker pull zadorpataki/mpsfm:latest
+```
+
+To test the Docker image, run:
+```bash
+docker run --gpus all -it --rm \
+  --shm-size=8g \
+  -v $(pwd):/mpsfm \
+  -w /mpsfm zadorpataki/mpsfm:latest
+```
+- --shm-size=8g: avoid PyTorch DataLoader crashes
+-	-v $(pwd):/mpsfm: mount your local directory
+-	-w /mpsfm: set working directory inside container
+
+Inside the container, finish by installing the Python package:
+```bash
+pip install -e .
+```
+
+</details>
 
 ## Execution
 Our [demo notebook](demo.ipynb) demonstrates a minimal usage example. It shows how to run the MP-SfM pipeline, and how to visualize the reconstruction with its multiple output modalities.
