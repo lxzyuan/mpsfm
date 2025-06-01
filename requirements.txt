@@ -36,7 +36,8 @@ einops
 geffnet
 
 # Dpro
-# ./third_party/ml-depth-pro
+pillow_heif
+-e ./third_party/ml-depth-pro
 
 # Contributing
 black 

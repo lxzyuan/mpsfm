@@ -86,11 +86,10 @@ python -m pip install -e .
 
 <summary><b>[Docker - click to expand]</b></summary>
 
-We also provide a Docker image with all system dependencies preinstalled.
+After cloning the repository with ```--recursive```, you can pull the Docker image with all system dependencies preinstalled:
 
 ```bash
-git clone --recursive https://github.com/cvg/mpsfm && cd mpsfm
-docker pull zadorpataki/mpsfm:latest
+docker pull mpsfm/mpsfm:latest
 ```
 
 To test the Docker image, run:
@@ -98,7 +97,7 @@ To test the Docker image, run:
 docker run --gpus all -it --rm \
   --shm-size=8g \
   -v $(pwd):/mpsfm \
-  -w /mpsfm zadorpataki/mpsfm:latest
+  -w /mpsfm mpsfm/mpsfm:latest
 ```
 - --shm-size=8g: avoid PyTorch DataLoader crashes
 -	-v $(pwd):/mpsfm: mount your local directory
@@ -107,6 +106,20 @@ docker run --gpus all -it --rm \
 Inside the container, finish by installing the Python package:
 ```bash
 pip install -e .
+```
+
+Finally, run the following optional steps. **Note**: that ```ml-depth-pro``` was omitted from the ```requirements.txt``` file during the Docker build.
+```bash
+# optional MASt3R speed up
+DIR=$PWD
+cd third_party/mast3r/dust3r/croco/models/curope/
+python setup.py build_ext --inplace
+cd $DIR
+
+# optinoal depthpro install 
+cd third_party/ml-depth-pro/
+pip install -e . --no-deps
+cd $DIR
 ```
 
 </details>
