@@ -81,6 +81,48 @@ python -m pip install -e .
 
 </details>
 
+<details>
+
+
+<summary><b>[Docker - click to expand]</b></summary>
+
+After cloning the repository with ```--recursive```, you can pull the Docker image with all system dependencies preinstalled:
+
+```bash
+docker pull mpsfm/mpsfm:latest
+```
+
+To test the Docker image, run:
+```bash
+docker run --gpus all -it --rm \
+  --shm-size=8g \
+  -v $(pwd):/mpsfm \
+  -w /mpsfm mpsfm/mpsfm:latest
+```
+- --shm-size=8g: avoid PyTorch DataLoader crashes
+-	-v $(pwd):/mpsfm: mount your local directory
+-	-w /mpsfm: set working directory inside container
+
+Inside the container, finish by installing the Python package:
+```bash
+pip install -e .
+```
+
+Finally, run the following optional steps. **Note**: ```ml-depth-pro``` was omitted from the ```requirements.txt``` file during the Docker build.
+```bash
+# optional MASt3R speed up
+DIR=$PWD
+cd third_party/mast3r/dust3r/croco/models/curope/
+python setup.py build_ext --inplace
+cd $DIR
+
+# optional depthpro install 
+cd third_party/ml-depth-pro/
+pip install -e . --no-deps
+cd $DIR
+```
+
+</details>
 
 ## Execution
 Our [demo notebook](demo.ipynb) demonstrates a minimal usage example. It shows how to run the MP-SfM pipeline, and how to visualize the reconstruction with its multiple output modalities.
