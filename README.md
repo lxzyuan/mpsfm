@@ -108,7 +108,7 @@ Inside the container, finish by installing the Python package:
 pip install -e .
 ```
 
-Finally, run the following optional steps. **Note**: that ```ml-depth-pro``` was omitted from the ```requirements.txt``` file during the Docker build.
+Finally, run the following optional steps. **Note**: ```ml-depth-pro``` was omitted from the ```requirements.txt``` file during the Docker build.
 ```bash
 # optional MASt3R speed up
 DIR=$PWD
@@ -116,7 +116,7 @@ cd third_party/mast3r/dust3r/croco/models/curope/
 python setup.py build_ext --inplace
 cd $DIR
 
-# optinoal depthpro install 
+# optional depthpro install 
 cd third_party/ml-depth-pro/
 pip install -e . --no-deps
 cd $DIR
