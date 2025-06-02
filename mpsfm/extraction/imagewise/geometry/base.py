@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from mpsfm.data_proc import get_dataset
 from mpsfm.extraction import load_model
 from mpsfm.utils.io import list_h5_names
 
@@ -63,6 +62,7 @@ def main(conf, export_dir, overwrite=False, image_list=None, model=None, scene_p
     loader = scene_parser.dataset(
         conf.dataset, image_list=image_list, scene_parser=scene_parser, cache_dir=export_dir
     ).get_dataloader()
+
     if verbose > 0:
         print(f"Extracting {len(loader)} files")
     if len(loader) == 0:
@@ -72,7 +72,7 @@ def main(conf, export_dir, overwrite=False, image_list=None, model=None, scene_p
     if model is None:
         model = load_model(conf)
 
-    for _i, data in enumerate(tqdm(loader)):
+    for data in tqdm(loader):
         pred = extract(data, model)
         if pred is None:
             continue
