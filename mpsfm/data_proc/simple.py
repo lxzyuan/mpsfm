@@ -39,6 +39,7 @@ class SimpleParser(BaseDatasetParser):
     def __init__(self, *args, data_dir=None, imnames=None, intrinsics_pth=None, rgb_dir=None, **kwargs):
         self.rec = Reconstruction()
         self.reconstruction_dir = None
+        intrinsics_pth = None
         if rgb_dir is None:
             rgb_dir = Path(data_dir) / "images"
         if imnames is None:
