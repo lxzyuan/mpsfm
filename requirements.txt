@@ -36,7 +36,6 @@ einops
 geffnet
 
 # Dpro
-pillow_heif
 -e ./third_party/ml-depth-pro
 
 # Contributing

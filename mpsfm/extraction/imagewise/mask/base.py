@@ -1,10 +1,9 @@
-import pprint
-
 import cv2
 import h5py
 import numpy as np
 from tqdm import tqdm
 
+from mpsfm.data_proc import get_dataset
 from mpsfm.extraction import load_model
 from mpsfm.utils.io import list_h5_names
 
@@ -19,13 +18,17 @@ def write(pred, output_path):
             grp.create_dataset(k, data=v)
 
 
-def extract(data, model):
+def extract(data, model, rot_images=False, skip_names=None):
+    if skip_names is None:
+        skip_names = {}
     input_data = {}
     name = data["meta"]["image_name"]
 
     assert len(name) == 1
     name = name[0]
 
+    if name in skip_names:
+        return None
     scale = model.conf.scale if hasattr(model.conf, "scale") else 1
     image = (data["image"].numpy()[0].transpose(1, 2, 0) * 255).astype(np.uint8)
     if scale != 1:
@@ -45,8 +48,6 @@ def extract(data, model):
 
 
 def main(conf, export_dir, overwrite=False, image_list=None, model=None, scene_parser=None, verbose=0):
-    if verbose > 0:
-        print("Extracting masks with configuration:" f"\n{pprint.pformat(conf)}")
     export_dir.mkdir(parents=True, exist_ok=True)
     write_name = conf.model.write_name if "write_name" in conf.model else conf.model.name
     output_path = export_dir / f"{write_name}.h5"
@@ -55,22 +56,19 @@ def main(conf, export_dir, overwrite=False, image_list=None, model=None, scene_p
     image_list = [f for f in image_list if f not in skip_names]
     if verbose > 0:
         print(f"Skipping {extract_num-len(image_list)} files")
-
-    loader = scene_parser.dataset(
+    loader = get_dataset(conf.dataset.name)(
         conf.dataset, image_list=image_list, scene_parser=scene_parser, cache_dir=export_dir
     ).get_dataloader()
-
-    if verbose > 0:
-        print(f"Extracting {len(loader)} files")
+    if verbose > 0 and len(skip_names) > 0:
+        print(f"Skipping {len(skip_names)} files")
     if len(loader) == 0:
-        print("Skipping the extraction.")
+        print("No files to extract")
         return output_path, model
-
     if model is None:
         model = load_model(conf)
 
     for data in tqdm(loader):
-        pred = extract(data, model)
+        pred = extract(data, model, skip_names)
         if pred is None:
             continue
         write(pred, output_path)
