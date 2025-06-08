@@ -85,3 +85,4 @@ cython_debug/
 
 
 custom_extraction_output/*.h5
+*.png

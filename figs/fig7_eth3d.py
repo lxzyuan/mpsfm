@@ -21,7 +21,7 @@ import torch
 import tqdm
 
 # ------------------ 配置区域 ------------------ #
-DATA_ROOT = Path("/mnt/d/work/mpsfm/ETH3D")        # 修改为你的 ETH3D 路径
+DATA_ROOT = Path("/mnt/data/0/cedar/datasets/ETH3D")        # 修改为你的 ETH3D 路径
 
 
 MODEL_ZOO = {      # 每个模型: 生成器、k 常数、是否用 Combined
@@ -51,7 +51,7 @@ SCENES = ["courtyard"]
 # ------------------------------------------------ #
 
 def list_frames(scene):
-    img_dir   = DATA_ROOT/f"{scene}_dslr_images"/scene/"images/dslr_images"
+    img_dir   = DATA_ROOT/f"{scene}_dslr_jpg"/scene/"images/dslr_images"
     depth_dir = DATA_ROOT/f"{scene}_dslr_depth"/scene/"ground_truth_depth/dslr_images"
     for jpg in sorted(img_dir.glob("*.JPG")):
         yield jpg, depth_dir/jpg.name
