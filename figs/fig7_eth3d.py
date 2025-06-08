@@ -153,8 +153,9 @@ def main():
         α = (σ*err).sum() / (σ**2).sum()         # 全局 scaling
         σ *= α
 
-        bins = np.linspace(0,2.0,41)
-        inds = np.digitize(σ, bins)-1
+        bins = np.linspace(0, 2.0, 41)
+        inds = np.digitize(σ, bins) - 1
+        inds = np.clip(inds, 0, len(bins) - 2)
         rmse_bin = [np.sqrt((err[inds==b]**2).mean()) if (inds==b).any() else np.nan
                     for b in range(len(bins)-1)]
         freq_bin = np.bincount(inds, minlength=len(bins)-1)/len(err)*100
