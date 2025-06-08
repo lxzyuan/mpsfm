@@ -11,10 +11,14 @@ ETH3D/
     └─ courtyard/ground_truth_depth/dslr_images/DSC_0286.JPG  (float32 深度伪 JPG)
 """
 
-import os, math, struct, argparse, tqdm, numpy as np, matplotlib.pyplot as plt
-import torch, imageio.v2 as iio
+import math
 from pathlib import Path
-from mpsfm.vars import gvars
+
+import imageio.v2 as iio
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import tqdm
 
 # ------------------ 配置区域 ------------------ #
 DATA_ROOT = Path("/mnt/d/work/mpsfm/ETH3D")        # 修改为你的 ETH3D 路径
@@ -22,14 +26,20 @@ DATA_ROOT = Path("/mnt/d/work/mpsfm/ETH3D")        # 修改为你的 ETH3D 路�
 
 MODEL_ZOO = {      # 每个模型: 生成器、k 常数、是否用 Combined
     "Metric3Dv2": dict(
-        factory = lambda: __import__("third_party.Metric3D", fromlist=["Metric3Dv2"]).Metric3Dv2(),
+        factory = lambda: __import__(
+            "mpsfm.extraction.imagewise.geometry.models.depth.metric3dv2",
+            fromlist=["Metric3Dv2"],
+        ).Metric3Dv2({}),
         k = 1.6e-4,
-        use_combined = True
+        use_combined = True,
     ),
     "MASt3R": dict(
-        factory = lambda: __import__("third_party.mast3r", fromlist=["MASt3R"]).MASt3R(),
+        factory = lambda: __import__(
+            "mpsfm.extraction.pairwise.models.mast3r",
+            fromlist=["Mast3rMatcher"],
+        ).Mast3rMatcher({}),
         k = 0.0,
-        use_combined = False
+        use_combined = False,
     ),
 }
 
@@ -76,8 +86,10 @@ def main():
 
     for row,(name,cfg) in enumerate(MODEL_ZOO.items()):
         net = cfg["factory"]().eval().cuda()
-        k   = cfg["k"];  use_comb = cfg["use_combined"]
-        all_err = [];  sigs = {"prior":[], "depth":[], "comb":[]}
+        k = cfg["k"]
+        use_comb = cfg["use_combined"]
+        all_err = []
+        sigs = {"prior": [], "depth": [], "comb": []}
 
         for scene in tqdm.tqdm(SCENES, desc=f"{name} scenes"):
             for rgb_path, depth_path in list_frames(scene):
@@ -102,25 +114,31 @@ def main():
         # --- 敏感度曲线 ---
         colors = dict(prior="C0", depth="C1", comb="C2", upper="k")
         ax = axs[row,0]
-        N  = len(all_err);  all_err = np.asarray(all_err)
+        N = len(all_err)
+        all_err = np.asarray(all_err)
         upper_rmse = np.sqrt(np.cumsum(np.sort(all_err)**2)/np.arange(1,N+1))
         recall = np.arange(1,N+1)/N*100
         ax.plot(recall, upper_rmse, color=colors["upper"], label="Upper Bound")
 
         for tag in ("prior","depth","comb"):
-            if tag=="depth" and k==0.0: continue
+            if tag=="depth" and k==0.0:
+                continue
             r, rm = make_sensitivity(all_err, np.asarray(sigs[tag]))
             ax.plot(r, rm, color=colors[tag], label=tag.capitalize())
 
-        ax.invert_yaxis();  ax.set_xlim(0,100)
-        ax.set_xlabel("Recall (%)");  ax.set_ylabel("RMSE (m)")
-        ax.set_title(f"{name} – Sensitivity"); ax.legend()
+        ax.invert_yaxis()
+        ax.set_xlim(0,100)
+        ax.set_xlabel("Recall (%)")
+        ax.set_ylabel("RMSE (m)")
+        ax.set_title(f"{name} – Sensitivity")
+        ax.legend()
 
         # --- 不确定度校准图 ---
         sel = "comb" if use_comb else "prior"
-        σ   = np.asarray(sigs[sel]);  err = all_err
-        α   = (σ*err).sum() / (σ**2).sum()         # 全局 scaling
-        σ  *= α
+        σ = np.asarray(sigs[sel])
+        err = all_err
+        α = (σ*err).sum() / (σ**2).sum()         # 全局 scaling
+        σ *= α
 
         bins = np.linspace(0,2.0,41)
         inds = np.digitize(σ, bins)-1
@@ -132,8 +150,10 @@ def main():
         axc = axs[row,1]
         axc.plot(center, rmse_bin, color=colors[sel], lw=2, label=sel.capitalize())
         axc.plot(center, center, '--k', lw=1, label="Perfect")
-        axc.set_xlabel("Depth StdDev (m)");  axc.set_ylabel("RMSE (m)")
-        axc.set_ylim(0,2.2);  axc.legend(loc="upper left")
+        axc.set_xlabel("Depth StdDev (m)")
+        axc.set_ylabel("RMSE (m)")
+        axc.set_ylim(0,2.2)
+        axc.legend(loc="upper left")
         ax2 = axc.twinx()
         ax2.bar(center, freq_bin, width=0.04, color=colors[sel], alpha=.25)
         ax2.set_ylabel("Bin Size (%)")
