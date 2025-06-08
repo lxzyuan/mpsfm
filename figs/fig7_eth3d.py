@@ -65,14 +65,27 @@ def read_depth_float32_jpg(path, hw):
     return depth
 
 def get_pred(net, rgb):
-    """用户需保证网络返回 dict(depth[N,1,H,W], sigma[N,1,H,W])，单位 m"""
-    im = rgb.astype(np.float32)/255.0
-    inp = torch.from_numpy(im.transpose(2,0,1))[None].cuda()
+    """Return depth and uncertainty from a geometry network."""
+    im = rgb.astype(np.float32) / 255.0
+    H, W = im.shape[:2]
+
+    # simple pinhole intrinsics centered in the image
+    fx = fy = max(H, W)
+    cx, cy = W / 2.0, H / 2.0
+    intr = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
+
     with torch.no_grad():
-        out = net(inp)
-    d   = out["depth"][0,0].cpu().numpy()
-    sig = out["sigma"][0,0].cpu().numpy()
-    return d, sig
+        out = net({"image": im, "intrinsics": intr})
+
+    depth = out["depth"]
+    if "depth_variance" in out:
+        sigma = np.sqrt(out["depth_variance"])
+    else:
+        sigma = out.get("sigma")
+        if sigma is None:
+            raise KeyError("Model output missing uncertainty information")
+
+    return depth, sigma
 
 def make_sensitivity(err, sig_arr):
     N = len(err)
