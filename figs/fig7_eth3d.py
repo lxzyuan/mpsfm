@@ -33,6 +33,14 @@ MODEL_ZOO = {
         k=1.6e-4,
         use_combined=True,
     ),
+    "MASt3R": dict(
+        factory=lambda: __import__(
+            "mpsfm.extraction.pairwise.models.mast3r",
+            fromlist=["Mast3rMatcher"],
+        ).Mast3rMatcher({}),
+        k=0.0,
+        use_combined=False,
+    ),
 }
 
 SCENES = ["courtyard", "delivery_area", "facade", "forest", "indoor", "kicker",
@@ -56,28 +64,48 @@ def read_depth_float32_jpg(path, hw):
     depth = np.frombuffer(buf, "<f4").reshape(H, W)
     return depth
 
-def get_pred(net, rgb):
+def get_pred(net, rgb, rgb_pair=None, names=("im0", "im1")):
     """Return depth and uncertainty from a geometry network."""
     im = rgb.astype(np.float32) / 255.0
-    H, W = im.shape[:2]
+    reqs = getattr(net, "required_inputs", [])
 
-    # simple pinhole intrinsics as fx, fy, cx, cy
-    fx = fy = max(H, W)
-    cx, cy = W / 2.0, H / 2.0
-    intr = np.array([fx, fy, cx, cy], dtype=np.float32)
+    if "image" in reqs:
+        H, W = im.shape[:2]
 
-    with torch.no_grad():
-        out = net({"image": im, "intrinsics": intr})
+        # simple pinhole intrinsics as fx, fy, cx, cy
+        fx = fy = max(H, W)
+        cx, cy = W / 2.0, H / 2.0
+        intr = np.array([fx, fy, cx, cy], dtype=np.float32)
 
-    depth = out["depth"]
-    if "depth_variance" in out:
-        sigma = np.sqrt(out["depth_variance"])
-    else:
-        sigma = out.get("sigma")
-        if sigma is None:
-            raise KeyError("Model output missing uncertainty information")
+        with torch.no_grad():
+            out = net({"image": im, "intrinsics": intr})
 
-    return depth, sigma
+        depth = out["depth"]
+        if "depth_variance" in out:
+            sigma = np.sqrt(out["depth_variance"])
+        else:
+            sigma = out.get("sigma")
+            if sigma is None:
+                raise KeyError("Model output missing uncertainty information")
+
+        return depth, sigma
+
+    if "image0" in reqs:
+        if rgb_pair is None:
+            raise ValueError("Second view required for MASt3R")
+        im0 = torch.from_numpy(im.transpose(2, 0, 1))[None]
+        im1 = torch.from_numpy(rgb_pair.astype(np.float32).transpose(2, 0, 1))[None]
+        name0, name1 = names
+        with torch.no_grad():
+            out = net(
+                {"image0": im0, "image1": im1, "name0": name0, "name1": name1},
+                mode="depth",
+            )
+        depth = out["depth0"]
+        sigma = np.sqrt(out["variance0"])
+        return depth, sigma
+
+    raise ValueError("Unknown model type")
 
 def make_sensitivity(err, sig_arr):
     N = len(err)
@@ -97,15 +125,25 @@ def main():
         sigs = {"prior": [], "depth": [], "comb": []}
 
         for scene in tqdm.tqdm(SCENES, desc=f"{name} scenes"):
-            for rgb_path, depth_path in list_frames(scene):
+            frames = list(list_frames(scene))
+            for i, (rgb_path, depth_path) in enumerate(frames):
                 # 读取彩色 & 真值深度
                 rgb   = iio.imread(rgb_path)
                 H,W   = rgb.shape[:2]
                 depth = read_depth_float32_jpg(depth_path, (H,W))
                 mask  = np.isfinite(depth) & (depth>0)
 
+                # second view if required
+                rgb_pair = None
+                names = (rgb_path.name, rgb_path.name)
+                if "image0" in getattr(net, "required_inputs", []):
+                    pair_idx = i + 1 if i < len(frames) - 1 else i - 1
+                    pair_rgb_path = frames[pair_idx][0]
+                    rgb_pair = iio.imread(pair_rgb_path)
+                    names = (rgb_path.name, pair_rgb_path.name)
+
                 # 预测
-                d_pred, sig_prior = get_pred(net, rgb)
+                d_pred, sig_prior = get_pred(net, rgb, rgb_pair, names)
 
                 sig_depth = math.sqrt(k) * d_pred
                 sig_comb  = np.maximum(sig_prior, sig_depth) if use_comb else sig_prior
