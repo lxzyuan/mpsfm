@@ -26,12 +26,12 @@ DATA_ROOT = Path("/mnt/d/work/mpsfm/ETH3D")        # 修改为你的 ETH3D 路�
 
 MODEL_ZOO = {      # 每个模型: 生成器、k 常数、是否用 Combined
     "Metric3Dv2": dict(
-        factory = lambda: __import__(
+        factory=lambda: __import__(
             "mpsfm.extraction.imagewise.geometry.models.depth.metric3dv2",
             fromlist=["Metric3Dv2"],
-        ).Metric3Dv2({}),
-        k = 1.6e-4,
-        use_combined = True,
+        ).Metric3Dv2({"return_types": ["depth", "depth_variance"]}),
+        k=1.6e-4,
+        use_combined=True,
     ),
     "MASt3R": dict(
         factory = lambda: __import__(
@@ -72,7 +72,8 @@ def get_pred(net, rgb):
     # simple pinhole intrinsics centered in the image
     fx = fy = max(H, W)
     cx, cy = W / 2.0, H / 2.0
-    intr = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
+    intr = np.eye(4, dtype=np.float32)
+    intr[:3, :3] = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
 
     with torch.no_grad():
         out = net({"image": im, "intrinsics": intr})
