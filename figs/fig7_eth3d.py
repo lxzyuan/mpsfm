@@ -51,7 +51,7 @@ SCENES = ["courtyard"]
 # ------------------------------------------------ #
 
 def list_frames(scene):
-    img_dir   = DATA_ROOT/f"{scene}_dslr_images"/scene/"images/dslr_images"
+    img_dir   = DATA_ROOT/f"{scene}_dslr_jpg"/scene/"images/dslr_images"
     depth_dir = DATA_ROOT/f"{scene}_dslr_depth"/scene/"ground_truth_depth/dslr_images"
     for jpg in sorted(img_dir.glob("*.JPG")):
         yield jpg, depth_dir/jpg.name
