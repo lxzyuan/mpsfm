@@ -19,9 +19,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import tqdm
+import cv2
 
 # ------------------ 配置区域 ------------------ #
-DATA_ROOT = Path("/mnt/d/work/mpsfm/ETH3D")        # 修改为你的 ETH3D 路径
+DATA_ROOT = Path("/mnt/data/0/cedar/datasets/ETH3D")        # 修改为你的 ETH3D 路径
 
 
 MODEL_ZOO = {
@@ -30,28 +31,30 @@ MODEL_ZOO = {
             "mpsfm.extraction.imagewise.geometry.models.depth.metric3dv2",
             fromlist=["Metric3Dv2"],
         ).Metric3Dv2({"return_types": ["depth", "depth_variance"]}),
-        k=1.6e-4,
+        required_inputs=["image"],
+        k=None,
         use_combined=True,
     ),
-    "MASt3R": dict(
-        factory=lambda: __import__(
-            "mpsfm.extraction.pairwise.models.mast3r",
-            fromlist=["Mast3rMatcher"],
-        ).Mast3rMatcher({}),
-        k=0.0,
-        use_combined=False,
-    ),
+    # "MASt3R": dict(
+    #     factory=lambda: __import__(
+    #         "mpsfm.extraction.pairwise.models.mast3r",
+    #         fromlist=["Mast3rMatcher"],
+    #     ).Mast3rMatcher({}),
+    #     required_inputs=["image0", "image1"],  # ← 双视图
+    #     k=0.0,
+    #     use_combined=False,
+    # ),
 }
 
-SCENES = ["courtyard", "delivery_area", "facade", "forest", "indoor", "kicker",
-          "meadow", "office", "pipes", "playground", "relief", "relief_2",
-          "relief_3", "square", "terrains", "terrains_2", "terrains_3",
-          "tunnel", "underpass", "wood_pile"]  # 20/30 够快，可按需增减
+# SCENES = ["courtyard", "delivery_area", "facade", "forest", "indoor", "kicker",
+#           "meadow", "office", "pipes", "playground", "relief", "relief_2",
+#           "relief_3", "square", "terrains", "terrains_2", "terrains_3",
+#           "tunnel", "underpass", "wood_pile"]  # 20/30 够快，可按需增减
 SCENES = ["courtyard"]
 # ------------------------------------------------ #
 
 def list_frames(scene):
-    img_dir   = DATA_ROOT/f"{scene}_dslr_images"/scene/"images/dslr_images"
+    img_dir   = DATA_ROOT/f"{scene}_dslr_jpg"/scene/"images/dslr_images"
     depth_dir = DATA_ROOT/f"{scene}_dslr_depth"/scene/"ground_truth_depth/dslr_images"
     for jpg in sorted(img_dir.glob("*.JPG")):
         yield jpg, depth_dir/jpg.name
@@ -64,48 +67,75 @@ def read_depth_float32_jpg(path, hw):
     depth = np.frombuffer(buf, "<f4").reshape(H, W)
     return depth
 
-def get_pred(net, rgb, rgb_pair=None, names=("im0", "im1")):
-    """Return depth and uncertainty from a geometry network."""
-    im = rgb.astype(np.float32) / 255.0
-    reqs = getattr(net, "required_inputs", [])
+def resize_to_full(x, hw):
+    if x.shape != hw:
+        return cv2.resize(x, (hw[1], hw[0]), interpolation=cv2.INTER_LINEAR)
+    return x
 
-    if "image" in reqs:
-        H, W = im.shape[:2]
 
-        # simple pinhole intrinsics as fx, fy, cx, cy
-        fx = fy = max(H, W)
-        cx, cy = W / 2.0, H / 2.0
-        intr = np.array([fx, fy, cx, cy], dtype=np.float32)
-
+def get_pred(net, rgb_np, intr, pair_np=None, names=("im0", "im1")):
+    reqs = net.required_inputs
+    if "image" in reqs:                                  # Metric3Dv2
+        rgb_t = torch.from_numpy(rgb_np.transpose(2,0,1)).unsqueeze(0).cuda() / 255.
+        intr_t = torch.from_numpy(intr).unsqueeze(0).cuda()
         with torch.no_grad():
-            out = net({"image": im, "intrinsics": intr})
-
-        depth = out["depth"]
-        if "depth_variance" in out:
-            sigma = np.sqrt(out["depth_variance"])
-        else:
-            sigma = out.get("sigma")
-            if sigma is None:
-                raise KeyError("Model output missing uncertainty information")
-
-        return depth, sigma
-
-    if "image0" in reqs:
-        if rgb_pair is None:
-            raise ValueError("Second view required for MASt3R")
-        im0 = torch.from_numpy(im.transpose(2, 0, 1))[None]
-        im1 = torch.from_numpy(rgb_pair.astype(np.float32).transpose(2, 0, 1))[None]
-        name0, name1 = names
+            out = net({"image": rgb_t, "intrinsics": intr_t})
+        depth = out["depth"][0,0].cpu().numpy()
+        sigma = np.sqrt(out["depth_variance"][0,0].cpu().numpy())
+    elif "image0" in reqs:                               # MASt3R
+        i0 = torch.from_numpy(rgb_np.transpose(2,0,1)).unsqueeze(0).cuda()/255.
+        i1 = torch.from_numpy(pair_np.transpose(2,0,1)).unsqueeze(0).cuda()/255.
         with torch.no_grad():
-            out = net(
-                {"image0": im0, "image1": im1, "name0": name0, "name1": name1},
-                mode="depth",
-            )
-        depth = out["depth0"]
-        sigma = np.sqrt(out["variance0"])
-        return depth, sigma
+            out = net({"image0": i0, "image1": i1, "name0": names[0], "name1": names[1]}, mode="depth")
+        depth = out["depth0"][0,0].cpu().numpy()
+        sigma = np.sqrt(out["variance0"][0,0].cpu().numpy())
+    else:
+        raise ValueError(f"Unsupported required_inputs: {reqs}")
 
-    raise ValueError("Unknown model type")
+    return depth, sigma
+
+# def get_pred(net, rgb, rgb_pair=None, names=("im0", "im1")):
+#     """Return depth and uncertainty from a geometry network."""
+#     im = rgb.astype(np.float32) / 255.0
+#     reqs = net.required_inputs
+
+#     if "image" in reqs:
+#         H, W = im.shape[:2]
+
+#         # simple pinhole intrinsics as fx, fy, cx, cy
+#         fx = fy = max(H, W)
+#         cx, cy = W / 2.0, H / 2.0
+#         intr = np.array([fx, fy, cx, cy], dtype=np.float32)
+
+#         with torch.no_grad():
+#             out = net({"image": im, "intrinsics": intr})
+
+#         depth = out["depth"]
+#         if "depth_variance" in out:
+#             sigma = np.sqrt(out["depth_variance"])
+#         else:
+#             sigma = out.get("sigma")
+#             if sigma is None:
+#                 raise KeyError("Model output missing uncertainty information")
+
+#         return depth, sigma
+
+#     elif "image0" in reqs:
+#         if rgb_pair is None:
+#             raise ValueError("Second view required for MASt3R")
+#         im0 = torch.from_numpy(im.transpose(2, 0, 1))[None]
+#         im1 = torch.from_numpy(rgb_pair.astype(np.float32).transpose(2, 0, 1))[None]
+#         name0, name1 = names
+#         with torch.no_grad():
+#             out = net(
+#                 {"image0": im0, "image1": im1, "name0": name0, "name1": name1},
+#                 mode="depth",
+#             )
+#         depth = out["depth0"]
+#         sigma = np.sqrt(out["variance0"])
+#         return depth, sigma
+#     else:
+#         raise ValueError("Unknown model type")
 
 def make_sensitivity(err, sig_arr):
     N = len(err)
@@ -119,6 +149,7 @@ def main():
 
     for row,(name,cfg) in enumerate(MODEL_ZOO.items()):
         net = cfg["factory"]().eval().cuda()
+        net.required_inputs = cfg["required_inputs"] 
         k = cfg["k"]
         use_comb = cfg["use_combined"]
         all_err = []
