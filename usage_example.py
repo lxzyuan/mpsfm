@@ -221,4 +221,4 @@ if __name__ == "__main__":
                 print("  No valid pixels (after considering default normals) to sample normal covariance.")
 
     print("\n--- Example Finished ---")
-```
+

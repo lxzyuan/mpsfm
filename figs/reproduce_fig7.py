@@ -1,3 +1,18 @@
+"""Reproduce the depth uncertainty analysis from Figure 7 of the paper.
+
+The script loads Metric3Dv2 predictions and ground‑truth depth for all ETH3D
+scenes and produces the sensitivity and calibration plots used in the paper.
+
+By default it expects the ETH3D cache directory to be located at
+``/mnt/data/0/cedar/datasets/mpsfm_local/benchmarks/eth3d/cache_dir``.  You can
+override this path by either setting the ``ETH3D_CACHE_DIR`` environment
+variable or passing ``--data_root`` on the command line.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
 from pathlib import Path
 
 import cv2
@@ -6,8 +21,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-# Directory containing all ETH3D scenes
-DATA_ROOT = Path("/mnt/data/0/cedar/datasets/mpsfm_local/benchmarks/eth3d/cache_dir")
+# Default directory containing all ETH3D scenes
+DEFAULT_ROOT = Path("/mnt/data/0/cedar/datasets/mpsfm_local/benchmarks/eth3d/cache_dir")
+DATA_ROOT = Path(os.environ.get("ETH3D_CACHE_DIR", DEFAULT_ROOT))
 # All scenes that provide predictions and ground truth
 SCENES = [
     "courtyard",
@@ -37,12 +53,14 @@ def resize_to_match(arr: np.ndarray, hw: tuple[int, int]) -> np.ndarray:
     return cv2.resize(arr.astype(np.float32), (hw[1], hw[0]), interpolation=cv2.INTER_LINEAR)
 
 
-def load_dataset() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def load_dataset(data_root: Path, scenes: list[str]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load all valid pixels across all scenes."""
-    all_err, all_depth, all_sigma = [], [], []
+    all_err: list[np.ndarray] = []
+    all_depth: list[np.ndarray] = []
+    all_sigma: list[np.ndarray] = []
 
-    for scene in tqdm(SCENES, desc="Scenes"):
-        scene_dir = DATA_ROOT / scene
+    for scene in tqdm(scenes, desc="Scenes"):
+        scene_dir = data_root / scene
         h5_path = scene_dir / H5_NAME
         gt_dir = scene_dir / GT_SUBDIR
         if not h5_path.exists() or not gt_dir.exists():
@@ -73,6 +91,9 @@ def load_dataset() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
                 all_depth.append(pred[mask])
                 all_sigma.append(sigma[mask])
 
+    if not all_err:
+        raise RuntimeError(f"No valid data found under {data_root}. Check the path and content.")
+
     return (
         np.concatenate(all_err),
         np.concatenate(all_depth),
@@ -87,8 +108,19 @@ def make_sensitivity(err: np.ndarray, sigma: np.ndarray) -> tuple[np.ndarray, np
     return recall, rmse
 
 
-def main() -> None:
-    err, depth, sigma_prior = load_dataset()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--data_root",
+        type=Path,
+        default=DATA_ROOT,
+        help="Path to ETH3D cache directory",
+    )
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace) -> None:
+    err, depth, sigma_prior = load_dataset(args.data_root, SCENES)
 
     sigma_depth = np.sqrt(K_CONST) * depth
     sigma_comb = np.maximum(sigma_prior, sigma_depth)
@@ -149,4 +181,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_args())
